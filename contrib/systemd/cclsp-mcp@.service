@@ -1,0 +1,17 @@
+[Unit]
+Description=cclsp MCP proxy on port %i (socket-activated)
+Documentation=man:systemd-socket-proxyd(8)
+# The socket owns the client-facing port; this unit starts on first connection.
+Requires=cclsp-mcp@%i.socket
+After=cclsp-mcp@%i.socket
+# The backend must be up (and bound) before the proxy accepts traffic.
+Wants=cclsp-backend@%i.service
+After=cclsp-backend@%i.service
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/cclsp/instances/%i.conf
+# Proxy the inherited socket to the backend; exit after 60 min idle.
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd --exit-idle-time=3600 127.0.0.1:${CCLSP_BACKEND_PORT}
+# A failed backend must not spin the socket into a restart storm.
+Restart=no

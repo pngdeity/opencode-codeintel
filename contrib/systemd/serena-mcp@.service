@@ -1,0 +1,17 @@
+[Unit]
+Description=Serena MCP proxy on port %i (socket-activated)
+Documentation=man:systemd-socket-proxyd(8)
+# The socket owns the client-facing port; this unit starts on first connection.
+Requires=serena-mcp@%i.socket
+After=serena-mcp@%i.socket
+# The backend must be up (and bound) before the proxy accepts traffic.
+Wants=serena-backend@%i.service
+After=serena-backend@%i.service
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/serena/instances/%i.conf
+# Proxy the inherited socket to the backend; exit after 60 min idle.
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd --exit-idle-time=3600 127.0.0.1:${SERENA_BACKEND_PORT}
+# A failed backend must not spin the socket into a restart storm.
+Restart=no

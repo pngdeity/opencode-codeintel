@@ -1,0 +1,8 @@
+[Unit]
+Description=Auto-disable idle serena/cclsp MCP instances
+Documentation=file:%h/.config/opencode/TODO.md
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env python3 %h/.local/bin/codeintel-instance-prune.py

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@pngdeity/opencode-codeintel",
+  "version": "0.1.0",
+  "description": "OpenCode V2 plugin for per-project socket-activated MCP code-intelligence routing and provisioning (Serena + mcpls fallback)",
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./server": "./index.ts",
+    "./core": "./src/codeintel/core.ts",
+    "./descriptors": "./src/codeintel/descriptors.ts"
+  },
+  "files": [
+    "index.ts",
+    "src/",
+    "contrib/",
+    "!**/*.test.ts",
+    "!contrib/**/*_test.py",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "lsp",
+    "mcp",
+    "serena",
+    "mcpls",
+    "code-intelligence"
+  ],
+  "author": "Nathan Somers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pngdeity/opencode-codeintel.git"
+  }
+}

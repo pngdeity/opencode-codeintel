@@ -1,0 +1,14 @@
+[Unit]
+Description=Weekly auto-disable of idle serena/cclsp MCP instances
+Documentation=file:%h/.config/opencode/TODO.md
+
+[Timer]
+OnCalendar=Sun 03:45
+RandomizedDelaySec=15min
+# Persistent=true is deliberately omitted: catch-up on login would run the
+# prune at exactly the moment a cold-looking root may be about to be opened,
+# and a missed weekly run just waits until next week. Sibling
+# opencode-data-maintenance.timer removes it for the same class of reason.
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,58 @@
+[Unit]
+Description=mcpls MCP backend for %i (socket-activated)
+Documentation=https://github.com/bug-ops/mcpls
+# Reaped when nothing requires it (i.e. the proxy has idle-exited).
+StopWhenUnneeded=yes
+# Stop alongside the proxy when its idle exit tears the chain down.
+PartOf=cclsp-mcp@%i.service
+After=network.target
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/cclsp/instances/%i.conf
+# mcpls config discovery: $MCPLS_CONFIG, then ./mcpls.toml (only with
+# --trust-project-config), then ~/.config/mcpls/mcpls.toml. We point it at the
+# catalog explicitly so a project-local mcpls.toml can never be picked up.
+Environment=MCPLS_CONFIG=%h/.config/opencode/mcpls.toml
+# supergateway has no --cwd and WorkingDirectory= does not expand ${VAR}, so the
+# project directory (which mcpls uses as its workspace root, since the catalog
+# sets roots = []) is set by cd inside the shell. exec keeps Type=exec tracking
+# the real process.
+# test -n is the fail-closed gate for the bind restriction below: an empty port
+# would otherwise mean "0.0.0.0/0" to IPAddressAllow, i.e. allow everything.
+ExecStart=/bin/sh -c 'test -n "${CCLSP_BACKEND_PORT}" || { echo "CCLSP_BACKEND_PORT unset" >&2; exit 1; }; cd "${CCLSP_PROJECT}" && exec %h/.local/bin/supergateway --stdio "%h/.local/bin/mcpls --log-level warn" --outputTransport streamableHttp --stateful --sessionTimeout 3600000 --port ${CCLSP_BACKEND_PORT}'
+# No --host: supergateway has never had that flag (verified absent from both
+# 4.0.0 and 4.1.0 --help). It was silently ignored, so removing it changes
+# nothing. supergateway binds the wildcard address unconditionally, which is why
+# the loopback-only invariant is enforced by the BPF allowlist below instead of
+# by an option. That allowlist also covers the per-project language servers mcpls
+# spawns, which inherit the sandbox and take no address from us at all. Egress to
+# 127.0.0.1 is unaffected, so LSP traffic still works.
+IPAddressDeny=any
+IPAddressAllow=localhost
+# supergateway reaps its own child process group; control-group is belt-and-braces.
+KillMode=control-group
+TimeoutStopSec=30
+
+# --stateful is REQUIRED, not a preference. In supergateway's default stateless
+# mode each HTTP request spawns a fresh stdio child, runs the auto-initialize
+# handshake, and lets the child's stdin reach EOF when the response is written.
+# cclsp tolerated that; mcpls does not — it treats stdin EOF as a shutdown
+# signal, so every tool call hit a server that was already exiting and returned
+# "-32051 ... still initializing". --stateful (supported only for
+# stdio->StreamableHttp, which is what we run) keeps one child alive for the
+# session. --sessionTimeout is raised from its 30-minute default so a long-lived
+# agent session is not torn down mid-work; when it does expire, the next request
+# simply spawns a fresh child and pays the cold start again.
+# mcpls answers the MCP handshake immediately but starts its language servers in
+# the background (and holds whole-workspace tools behind a "still initializing"
+# error until each is ready). Waiting for the port to bind — which is all cclsp
+# needed — would declare readiness while every tool call still fails, so the gate
+# is the MCP initialization response rather than the socket.
+# The probe lives in a Python script rather than an inline ExecStartPost: the
+# JSON payload needs double quotes and systemd strips backslashes from ExecStart
+# lines, so an inline payload arrives corrupted at the server.
+# The probe must tolerate -32051: with all 17 servers cold-starting it can
+# take well over 90 s before the handshake alone is answered, and --stateful
+# means that cost is paid once per session rather than per request.
+ExecStartPost=/usr/bin/timeout 90 %h/.local/bin/mcpls-ready.py ${CCLSP_BACKEND_PORT}

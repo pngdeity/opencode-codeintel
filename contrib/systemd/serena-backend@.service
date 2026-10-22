@@ -1,0 +1,22 @@
+[Unit]
+Description=Serena MCP backend for %i (socket-activated)
+Documentation=https://github.com/oraios/serena
+# Reaped when nothing requires it (i.e. the proxy has idle-exited).
+StopWhenUnneeded=yes
+# Stop alongside the proxy when its idle exit tears the chain down.
+PartOf=serena-mcp@%i.service
+After=network.target
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/serena/instances/%i.conf
+ExecStart=%h/.local/bin/serena start-mcp-server \
+    --transport streamable-http \
+    --host 127.0.0.1 \
+    --port ${SERENA_BACKEND_PORT} \
+    --project ${SERENA_PROJECT} \
+    --context ide
+# Serena does not call sd_notify, so wait until it actually binds its port.
+ExecStartPost=/usr/bin/timeout 60 /bin/sh -c 'until /usr/bin/ss -ltn | /usr/bin/grep -q ":${SERENA_BACKEND_PORT} "; do /usr/bin/sleep 0.2; done'
+KillMode=mixed
+TimeoutStopSec=30

@@ -1,0 +1,16 @@
+[Unit]
+Description=cclsp MCP listener on port %i (socket-activated)
+Documentation=man:systemd.socket(5) man:systemd-socket-proxyd(8)
+# Instance name is the client-facing port:
+#   systemctl --user enable --now cclsp-mcp@8801.socket
+
+[Socket]
+ListenStream=127.0.0.1:%i
+Accept=no
+Service=cclsp-mcp@%i.service
+# Do not let a burst of connects trigger a restart storm.
+TriggerLimitIntervalSec=30
+TriggerLimitBurst=5
+
+[Install]
+WantedBy=sockets.target
