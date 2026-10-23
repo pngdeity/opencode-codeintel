@@ -1,8 +1,28 @@
 [Unit]
 Description=Auto-disable idle serena/cclsp MCP instances
-Documentation=file:%h/.config/opencode/TODO.md
+Documentation=https://github.com/pngdeity/opencode-codeintel
 ConditionACPower=true
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env python3 %h/.local/bin/codeintel-instance-prune.py
+# The script honours $XDG_CONFIG_HOME and $XDG_STATE_HOME but a systemd user
+# service does not necessarily inherit them, so pin the values systemd itself
+# uses (%E is $XDG_CONFIG_HOME, %S is $XDG_STATE_HOME).
+Environment=XDG_CONFIG_HOME=%E XDG_STATE_HOME=%S
+# The script is named bare, so systemd resolves it through ExecSearchPath=
+# rather than through a fixed path. That is what makes one file serve every
+# installation channel:
+#   - `codeintel install` puts it first on the list via %D/opencode-codeintel/bin
+#     (the data directory the CLI copies into);
+#   - a distro or nix package that ships this unit untouched puts the script
+#     somewhere on the remaining entries (a store path is normally reached
+#     through %h/.local/bin or the package's own prefix).
+# A path in ExecStart= cannot do this: ExecSearchPath= resolves only the first
+# word, so `env python3 <path>` bypasses the search entirely.
+#
+# No interpreter is named. Both scripts carry a `#!/usr/bin/env python3`
+# shebang, and naming python3 explicitly would require a bare script name to be
+# on the user manager's PATH, which it is not. The executable bit is set by the
+# installing channel; `git` preserves it (verified: mode 100755 in the index).
+ExecSearchPath=%D/opencode-codeintel/bin:/usr/local/bin:/usr/bin:/bin:%h/.local/bin:%h/.local/share/opencode-codeintel/bin
+ExecStart=codeintel-instance-prune.py

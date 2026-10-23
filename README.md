@@ -2,6 +2,19 @@
 
 OpenCode V2 plugin providing per-project socket-activated MCP code-intelligence routing and provisioning for **Serena** (`serena`) and the **mcpls** universal LSP fallback (`cclsp`).
 
+## Install
+
+```sh
+opencode plugin add @pngdeity/opencode-codeintel
+npx @pngdeity/opencode-codeintel install
+npx @pngdeity/opencode-codeintel doctor
+```
+
+`install` places the systemd user units and maintenance scripts; `doctor`
+verifies a language server actually attached. See
+[`docs/INSTALL.md`](./docs/INSTALL.md) for prerequisites, lingering, the
+environment a proxy-installed language server needs, and uninstall.
+
 ## Surfaces Registered
 
 1. **MCP Router (`mcp-route`)**: Routes `serena` and `cclsp` remote MCP entries per project directory using `~/.config/{serena,cclsp}/instances/*.conf`.
@@ -13,4 +26,10 @@ OpenCode V2 plugin providing per-project socket-activated MCP code-intelligence 
 
 ## Companion Systemd Units & Scripts
 
-Reference systemd user socket/service templates and maintenance scripts are bundled under [`contrib/`](./contrib).
+The systemd user unit templates ship in [`share/systemd/user/`](./share/systemd/user)
+and are installed by `codeintel install`. The maintenance scripts they reference
+ship in [`bin/`](./bin).
+
+The package owns these files; it does not install them implicitly. There is no
+`postinstall`, because OpenCode runs plugin installs with `ignoreScripts: true`,
+so one would never fire.

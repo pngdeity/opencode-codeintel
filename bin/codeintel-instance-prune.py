@@ -42,7 +42,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE = Path.home() / ".local" / "state" / "opencode"
+def _xdg(name: str, default: str) -> Path:
+    value = os.environ.get(name)
+    return Path(value) if value else Path.home() / default
+
+
+CONFIG = _xdg("XDG_CONFIG_HOME", ".config")
+STATE = _xdg("XDG_STATE_HOME", ".local/state") / "opencode"
 LOG = STATE / "codeintel-prune.log"
 LOCK = STATE / "codeintel-prune.lock"
 
@@ -50,12 +56,19 @@ IDLE_DAYS = int(os.environ.get("CODEINTEL_PRUNE_DAYS", "14"))
 DRY = os.environ.get("CODEINTEL_PRUNE_DRY", "0") == "1"
 if "--dry-run" in sys.argv[1:]:
     DRY = True
+if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
+    # Answered before anything on disk is touched: a run that evaluates the
+    # predicate must not be the same command as one that asks what it does.
+    print(__doc__.strip())
+    print("\nflags: --dry-run   report what would be disabled, change nothing")
+    print("env  : CODEINTEL_PRUNE_DAYS (default 14), CODEINTEL_PRUNE_DRY=1")
+    raise SystemExit(0)
 
 IDLE_SECS = IDLE_DAYS * 86400
 
 INSTANCES = (
-    ("serena", Path.home() / ".config" / "serena" / "instances", "SERENA_PROJECT", "SERENA_PROXY_PORT"),
-    ("cclsp", Path.home() / ".config" / "cclsp" / "instances", "CCLSP_PROJECT", "CCLSP_PROXY_PORT"),
+    ("serena", CONFIG / "serena" / "instances", "SERENA_PROJECT", "SERENA_PROXY_PORT"),
+    ("cclsp", CONFIG / "cclsp" / "instances", "CCLSP_PROJECT", "CCLSP_PROXY_PORT"),
 )
 
 

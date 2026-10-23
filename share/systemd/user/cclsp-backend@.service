@@ -9,18 +9,42 @@ After=network.target
 
 [Service]
 Type=exec
-EnvironmentFile=-%h/.config/cclsp/instances/%i.conf
-# mcpls config discovery: $MCPLS_CONFIG, then ./mcpls.toml (only with
-# --trust-project-config), then ~/.config/mcpls/mcpls.toml. We point it at the
-# catalog explicitly so a project-local mcpls.toml can never be picked up.
-Environment=MCPLS_CONFIG=%h/.config/opencode/mcpls.toml
-# supergateway has no --cwd and WorkingDirectory= does not expand ${VAR}, so the
-# project directory (which mcpls uses as its workspace root, since the catalog
-# sets roots = []) is set by cd inside the shell. exec keeps Type=exec tracking
-# the real process.
+EnvironmentFile=-%E/cclsp/instances/%i.conf
+# mcpls config discovery order: $MCPLS_CONFIG, then ./mcpls.toml (only with
+# --trust-project-config), then $XDG_CONFIG_HOME/mcpls/mcpls.toml else
+# ~/.config/mcpls/mcpls.toml. No override is set here on purpose: a path that
+# does not exist is worse than no setting, and a catalog FILE REPLACES mcpls's
+# built-in server list, so forcing one would silently disable the built-in
+# marker-gated catalog. Installers that want a catalog set MCPLS_CONFIG in the
+# per-instance conf, which EnvironmentFile= above already loads.
+#
+# The built-in catalog is sufficient for languages whose server is reachable with
+# no extra environment (measured: python attached with no catalog at all). It is
+# NOT sufficient for a rustup-proxied server: mcpls starts language servers with
+# a reduced environment (its allowlist is PATH/HOME/TMPDIR and friends, plus the
+# entry's own env -- documented in mcpls's security chapter), so RUSTUP_HOME and
+# CARGO_HOME are dropped and a proxy like /usr/lib/rustup/bin/rust-analyzer exits
+# with "rustup could not choose a version". Measured: mcpls logs "2 allowlisted
+# key(s) present, 0 configured override(s) applied" and fails even when the parent
+# process has RUSTUP_HOME set. The fix is the catalog's env table, not anything in
+# this unit -- the unit cannot pass a variable mcpls refuses to forward.
+#
+# ExecSearchPath= resolves the bare command names in ExecStart=. It does NOT
+# reach inside `sh -c`, whose commands resolve through PATH (verified: systemd
+# returns 127 for a name only on ExecSearchPath). Because supergateway has no
+# --cwd and WorkingDirectory= does not expand ${VAR}, the project directory
+# (which mcpls uses as its workspace root) is set by `cd` inside the shell, so
+# this unit needs the $PATH form, not the ExecSearchPath form.
+# PATH is deliberately NOT overridden. A user manager's PATH already includes the
+# deployment's bin directories, and a sh -c child inherits it (measured). Replacing
+# it drops things mcpls needs -- measured on this host: an explicit
+# PATH=/usr/local/bin:/usr/bin:/bin omitted /usr/lib/rustup/bin, so the
+# rustup-provided rust-analyzer proxy was not found at all and every Rust route
+# reported "no_server". ExecSearchPath= covers only the outer command names, so it
+# cannot substitute for PATH here.
 # test -n is the fail-closed gate for the bind restriction below: an empty port
 # would otherwise mean "0.0.0.0/0" to IPAddressAllow, i.e. allow everything.
-ExecStart=/bin/sh -c 'test -n "${CCLSP_BACKEND_PORT}" || { echo "CCLSP_BACKEND_PORT unset" >&2; exit 1; }; cd "${CCLSP_PROJECT}" && exec %h/.local/bin/supergateway --stdio "%h/.local/bin/mcpls --log-level warn" --outputTransport streamableHttp --stateful --sessionTimeout 3600000 --port ${CCLSP_BACKEND_PORT}'
+ExecStart=/bin/sh -c 'test -n "${CCLSP_BACKEND_PORT}" || { echo "CCLSP_BACKEND_PORT unset" >&2; exit 1; }; cd "${CCLSP_PROJECT}" && exec supergateway --stdio "mcpls --log-level warn" --outputTransport streamableHttp --stateful --sessionTimeout 3600000 --port ${CCLSP_BACKEND_PORT}'
 # No --host: supergateway has never had that flag (verified absent from both
 # 4.0.0 and 4.1.0 --help). It was silently ignored, so removing it changes
 # nothing. supergateway binds the wildcard address unconditionally, which is why
@@ -46,13 +70,17 @@ TimeoutStopSec=30
 # simply spawns a fresh child and pays the cold start again.
 # mcpls answers the MCP handshake immediately but starts its language servers in
 # the background (and holds whole-workspace tools behind a "still initializing"
-# error until each is ready). Waiting for the port to bind — which is all cclsp
-# needed — would declare readiness while every tool call still fails, so the gate
-# is the MCP initialization response rather than the socket.
+# error until each is ready). Waiting for the port to bind would declare
+# readiness while every tool call still fails, so the gate is the MCP
+# initialization response rather than the socket.
 # The probe lives in a Python script rather than an inline ExecStartPost: the
 # JSON payload needs double quotes and systemd strips backslashes from ExecStart
 # lines, so an inline payload arrives corrupted at the server.
-# The probe must tolerate -32051: with all 17 servers cold-starting it can
-# take well over 90 s before the handshake alone is answered, and --stateful
-# means that cost is paid once per session rather than per request.
-ExecStartPost=/usr/bin/timeout 90 %h/.local/bin/mcpls-ready.py ${CCLSP_BACKEND_PORT}
+# The script's directory is rewritten by `codeintel install` to the data
+# directory it copies into. A package that ships this unit untouched needs to
+# point `systemctl --user edit` at wherever it placed the script, or set
+# MCPLS_READY_SCRIPT. Unlike the prune unit this cannot be made channel-agnostic
+# with a bare name: ExecSearchPath= resolves only the first word of the command
+# line, and the readiness probe is a required ExecStartPost, so a missing script
+# must fail loudly rather than fall through.
+ExecStartPost=/usr/bin/env python3 @CODEINTEL_SCRIPTS@/mcpls-ready.py ${CCLSP_BACKEND_PORT}

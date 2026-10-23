@@ -19,6 +19,8 @@ import unittest
 from pathlib import Path
 
 SCRIPT = Path(__file__).with_name("codeintel-instance-prune.py")
+if not SCRIPT.exists():
+    SCRIPT = Path(__file__).parent.parent / "bin" / "codeintel-instance-prune.py"
 spec = importlib.util.spec_from_file_location("prune", SCRIPT)
 prune = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prune)

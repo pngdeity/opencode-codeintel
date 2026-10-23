@@ -18,11 +18,15 @@
     "type": "git",
     "url": "git+https://github.com/pngdeity/opencode-codeintel.git"
   },
+  "bin": {
+    "codeintel": "./bin/codeintel.ts"
+  },
   "files": [
     "index.ts",
     "bin/",
     "src/",
     "share/",
+    "docs/",
     "!**/*.test.ts",
     "!**/*_test.py",
     "!**/__pycache__/",
@@ -37,6 +41,9 @@
     "./server": "./index.ts",
     "./core": "./src/codeintel/core.ts",
     "./descriptors": "./src/codeintel/descriptors.ts"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "bun test"
