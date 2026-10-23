@@ -19,7 +19,7 @@
 // name now denotes the
 // fallback-instance slot, not the retired npm package.
 
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
@@ -123,11 +123,15 @@ export async function verifyInstance(proxyPort: number): Promise<VerifyResult> {
 }
 
 function isRegistered(root: string): boolean {
-  const grep = Bun.spawnSync(["rg", "-q", "-F", root, `${SERENA_HOME}/serena_config.yml`], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (grep.exitCode ?? 1) === 0;
+  // Read rather than shell out: `rg` is not present on every host that runs
+  // this (a CI runner has none), and a missing tool would read as "not
+  // registered" and invent a divergence that does not exist.
+  try {
+    const text = readFileSync(`${SERENA_HOME}/serena_config.yml`, "utf8");
+    return text.includes(root);
+  } catch {
+    return false;
+  }
 }
 
 // The curated project.yml, written over whatever `serena project create` left.

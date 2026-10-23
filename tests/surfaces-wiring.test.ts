@@ -62,6 +62,9 @@ function effects(over: { confs?: Conf[]; verified?: boolean } = {}): EnableEffec
   return {
     resolveTarget: () => ({ at: ROOT, root: ROOT, gitRoot: ROOT }),
     readConfs: async () => over.confs ?? [],
+    // Without this the lifecycle asks the real systemctl, so the test fails on
+    // any host with no user systemd session rather than on a product change.
+    unitState: () => ({ enabled: "enabled", active: "active" }),
     verify: async () =>
       over.verified === false
         ? { ok: false, detail: "the backend did not answer initialize: ECONNREFUSED" }
