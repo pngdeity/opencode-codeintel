@@ -19,7 +19,7 @@
     "url": "git+https://github.com/pngdeity/opencode-codeintel.git"
   },
   "bin": {
-    "codeintel": "./bin/codeintel.ts"
+    "codeintel": "bin/codeintel.ts"
   },
   "files": [
     "index.ts",
