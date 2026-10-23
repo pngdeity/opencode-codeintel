@@ -51,10 +51,15 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { containingRoot } from "./codeintel/core";
 import { instanceDirectory } from "./codeintel/location";
+import { SERENA as SERENA_DESCRIPTOR, CCLSP as CCLSP_DESCRIPTOR } from "./codeintel/descriptors";
 
 const HOME = process.env.HOME ?? "";
-const SERENA_DIR = `${HOME}/.config/serena/instances`;
-const CCLSP_DIR = `${HOME}/.config/cclsp/instances`;
+// Both directories come from the same descriptors the provisioning surfaces
+// write through. Computing them here independently made the router read a
+// different tree than the writer whenever SERENA_HOME was set: the descriptor
+// honours it, this module used to hardcode $HOME/.config.
+const SERENA_DIR = SERENA_DESCRIPTOR.instancesDir;
+const CCLSP_DIR = CCLSP_DESCRIPTOR.instancesDir;
 const SERVER_NAMES = ["serena", "cclsp"] as const;
 const WATCH_INTERVAL_MS = 5000;
 
