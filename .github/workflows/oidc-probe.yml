@@ -12,19 +12,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: exchange the OIDC token by hand and report what npm says
-        env:
-          URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-          TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
+      - name: stage, verbose
         run: |
-          echo "--- request an npm audience token ---"
-          RESP=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm:registry.npmjs.org")
-          echo "$RESP" | head -c 120; echo
-          JWT=$(echo "$RESP" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).value)}catch(e){console.log("")}})')
-          if [ -z "$JWT" ]; then echo "NO JWT"; exit 0; fi
-          echo "jwt length: ${#JWT}"
-          echo "--- claims ---"
-          echo "$JWT" | cut -d. -f2 | base64 -d 2>/dev/null | head -c 600; echo
-      - name: stage, verbose, with the registry explicitly set
-        run: npm stage publish --registry=https://registry.npmjs.org --loglevel verbose 2>&1 | rg -i "http fetch|npm error|ENEEDAUTH|E401|oidc|token" | head -25
+          npm stage publish --registry=https://registry.npmjs.org --loglevel silly > /tmp/out.txt 2>&1
+          echo "exit: $?"
+          grep -iE "http fetch|oidc|token|ENEEDAUTH|E401|exchange|npmjs" /tmp/out.txt | head -40
