@@ -19,4 +19,4 @@ jobs:
           node-version: '24'
           package-manager-cache: false
       - run: bun test
-      - run: npm stage publish --loglevel silly 2>&1 | tail -25
+      - run: npm stage publish
