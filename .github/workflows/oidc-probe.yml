@@ -8,19 +8,23 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: token endpoint present
+      - name: exchange the OIDC token by hand and report what npm says
+        env:
+          URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+          TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
         run: |
-          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then echo "URL: present"; else echo "URL: ABSENT"; fi
-          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then echo "TOKEN: present"; else echo "TOKEN: ABSENT"; fi
-      - name: npm identity
-        run: |
-          npm --version
-          echo "--- npmrc files ---"
-          ls -la ~/.npmrc /home/runner/work/_temp/.npmrc 2>&1 || true
-          echo "--- whoami via OIDC ---"
-          npm whoami 2>&1 | head -3
-      - name: stage with verbose logging
-        run: npm stage publish --loglevel verbose 2>&1 | tail -30
+          echo "--- request an npm audience token ---"
+          RESP=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=npm:registry.npmjs.org")
+          echo "$RESP" | head -c 120; echo
+          JWT=$(echo "$RESP" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).value)}catch(e){console.log("")}})')
+          if [ -z "$JWT" ]; then echo "NO JWT"; exit 0; fi
+          echo "jwt length: ${#JWT}"
+          echo "--- claims ---"
+          echo "$JWT" | cut -d. -f2 | base64 -d 2>/dev/null | head -c 600; echo
+      - name: stage, verbose, with the registry explicitly set
+        run: npm stage publish --registry=https://registry.npmjs.org --loglevel verbose 2>&1 | rg -i "http fetch|npm error|ENEEDAUTH|E401|oidc|token" | head -25
