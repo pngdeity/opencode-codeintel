@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@pngdeity/opencode-codeintel",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenCode V2 plugin for per-project socket-activated MCP code-intelligence routing and provisioning (Serena + mcpls fallback)",
   "keywords": [
     "code-intelligence",
@@ -23,6 +23,7 @@
   },
   "files": [
     "index.ts",
+    "tui.tsx",
     "bin/",
     "src/",
     "share/",
@@ -39,13 +40,35 @@
   "exports": {
     ".": "./index.ts",
     "./server": "./index.ts",
+    "./tui": "./tui.tsx",
     "./core": "./src/codeintel/core.ts",
-    "./descriptors": "./src/codeintel/descriptors.ts"
+    "./descriptors": "./src/codeintel/descriptors.ts",
+    "./snapshot": "./src/codeintel/snapshot.ts"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "test": "bun test"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.0.0",
+    "@opentui/core": ">=0.6.6",
+    "@opentui/solid": ">=0.6.6",
+    "solid-js": ">=1.9.0"
+  },
+  "peerDependenciesMeta": {
+    "@opencode/plugin": {
+      "optional": true
+    },
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    }
   }
 }

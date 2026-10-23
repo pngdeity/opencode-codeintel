@@ -23,6 +23,17 @@ environment a proxy-installed language server needs, and uninstall.
 4. **`mcp-instance` Tool**: Direct lifecycle control (`enable`, `disable`, `status`) for the `cclsp` (`mcpls`) fallback instance.
 5. **`serena-instance` Tool**: Direct lifecycle control (`enable`, `refresh`, `disable`, `status`, `submodules`) for Serena instances.
 6. **`serena-provision` Tool**: Multi-language `project.yml` census and provisioning for Serena 2.0.0.
+7. **Code intel sidebar block (`./tui`)**: Backend liveness and the language servers each backend spawned, drawn in the sidebar. Exporting `./tui` beside the main entrypoint is what loads it; OpenTUI and Solid are peers supplied by the host runtime.
+
+## Exports
+
+| subpath | contents |
+|---|---|
+| `.` / `./server` | the plugin entrypoint and every server surface above |
+| `./tui` | the sidebar panel |
+| `./core` | conf reading, port allocation, `systemctl`/`git` helpers |
+| `./descriptors` | the `SERENA` and `CCLSP` descriptors |
+| `./snapshot` | backend/LSP recovery (`readServers`, `currentProject`), renderer-free |
 
 ## Companion Systemd Units & Scripts
 

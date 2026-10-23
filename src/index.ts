@@ -19,16 +19,10 @@ import mcpRoute from "./mcp-route";
 import serenaInstance from "./serena-instance";
 import serenaProvision from "./serena-provision";
 
-export {
-  codeintelTool,
-  lspCommand,
-  mcpInstance,
-  mcpRoute,
-  serenaInstance,
-  serenaProvision,
-};
+export { codeintelTool, lspCommand, mcpInstance, mcpRoute, serenaInstance, serenaProvision };
 export * from "./codeintel/core";
 export * from "./codeintel/descriptors";
+export * from "./codeintel/snapshot";
 export * from "./codeintel/instance";
 export * from "./codeintel/coverage";
 export * from "./codeintel/status";
